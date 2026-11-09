@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>سليم — عدّاد الدراسة</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#141b24;
+    --panel-2:#182231;
+    --line:#22303f;
+    --text:#e8eef5;
+    --muted:#8b9bb0;
+    --accent:#2dd4bf;
+    --accent-soft:rgba(45,212,191,.14);
+    --warm:#f2b544;
+    --warm-soft:rgba(242,181,68,.16);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 600px at 50% -10%, #16222e 0%, var(--bg) 60%);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:"SF Arabic","Segoe UI","Noto Naskh Arabic","Noto Sans Arabic",Tahoma,Arial,sans-serif;
+    display:flex;
+    justify-content:center;
+    padding:24px 16px calc(28px + env(safe-area-inset-bottom));
+  }
+  .app{width:100%; max-width:430px}
+  header{text-align:center; margin-bottom:18px}
+  .brand{
+    font-size:32px; font-weight:700; letter-spacing:.5px;
+    background:linear-gradient(180deg,#fff, var(--accent));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .sub{color:var(--muted); font-size:13px; margin-top:3px}
+
+  .presets{display:flex; gap:8px; justify-content:center; margin-bottom:14px}
+  .preset{
+    font:inherit; font-size:13px; color:var(--muted); background:var(--panel);
+    border:1px solid var(--line); border-radius:999px; padding:7px 14px; cursor:pointer;
+  }
+  .preset.on{color:var(--accent); border-color:rgba(45,212,191,.45); background:var(--accent-soft)}
+
+  .tabs{
+    display:flex; gap:6px; background:var(--panel); border:1px solid var(--line);
+    padding:6px; border-radius:14px; margin-bottom:22px;
+  }
+  .tab{
+    flex:1; border:0; background:transparent; color:var(--muted);
+    font:inherit; font-size:14px; padding:10px 6px; border-radius:10px; cursor:pointer;
+    transition:background .18s, color .18s;
+  }
+  .tab.active{background:var(--accent-soft); color:var(--accent); font-weight:600}
+
+  .dial{position:relative; display:grid; place-items:center; margin-bottom:22px}
+  .dial svg{width:min(74vw,286px); height:auto; transform:rotate(-90deg)}
+  .track{fill:none; stroke:#1b2530; stroke-width:12}
+  .progress{
+    fill:none; stroke:var(--accent); stroke-width:12; stroke-linecap:round;
+    stroke-dasharray:653.45; stroke-dashoffset:0;
+    transition:stroke-dashoffset .3s linear, stroke .3s;
+    filter:drop-shadow(0 0 10px rgba(45,212,191,.35));
+  }
+  .center{position:absolute; text-align:center}
+  .time{
+    font-variant-numeric:tabular-nums;
+    font-size:clamp(46px,14vw,62px); font-weight:700; letter-spacing:1px; line-height:1;
+  }
+  .state{color:var(--muted); font-size:14px; margin-top:8px}
+
+  .controls{display:flex; gap:12px; margin-bottom:22px}
+  .btn{
+    flex:1; font:inherit; font-size:17px; font-weight:600; padding:15px 12px;
+    border-radius:16px; border:1px solid var(--line); background:var(--panel);
+    color:var(--text); cursor:pointer; transition:transform .08s, background .18s;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn.primary{
+    background:var(--accent); border-color:var(--accent); color:#06201d; flex:2;
+  }
+  .btn.primary.paused{background:var(--warm); border-color:var(--warm); color:#241a05}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding:14px 16px; margin-bottom:14px;
+  }
+  .goal-top{display:flex; justify-content:space-between; align-items:baseline; font-size:14px}
+  .goal-top .num{font-variant-numeric:tabular-nums; font-weight:700}
+  .goal-top .num b{color:var(--accent); font-size:17px}
+  .goal-top .right{color:var(--muted)}
+  .bar{height:8px; border-radius:99px; background:#0e151d; overflow:hidden; margin-top:10px}
+  .bar > i{
+    display:block; height:100%; width:0%; border-radius:99px;
+    background:linear-gradient(90deg, var(--accent), #7ce8d8);
+    transition:width .4s ease;
+  }
+  .bar.full > i{background:linear-gradient(90deg, var(--warm), #ffd68a)}
+  .meta{display:flex; justify-content:space-between; margin-top:10px; font-size:12px; color:var(--muted)}
+
+  .chart-head{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:12px}
+  .chart{display:flex; align-items:flex-end; gap:8px; height:96px}
+  .col{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end}
+  .col .v{font-size:10px; color:var(--muted); font-variant-numeric:tabular-nums; min-height:12px}
+  .col .b{
+    width:100%; border-radius:6px 6px 3px 3px; background:#233041; min-height:3px;
+    transition:height .4s ease;
+  }
+  .col.today .b{background:var(--accent)}
+  .col .d{font-size:10px; color:var(--muted)}
+
+  details{margin-top:4px}
+  summary{color:var(--muted); font-size:13px; cursor:pointer; list-style:none; padding:10px 0}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:" ▾"}
+  .settings{display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:right; padding-top:6px}
+  .settings label{font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:6px}
+  .settings input[type=number]{
+    font:inherit; font-size:15px; color:var(--text); background:var(--panel-2);
+    border:1px solid var(--line); border-radius:10px; padding:10px; width:100%;
+  }
+  .settings .row{grid-column:1 / -1; display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13px}
+  .settings input[type=checkbox]{width:18px; height:18px; accent-color:var(--accent)}
+  .done .progress{stroke:var(--warm); filter:drop-shadow(0 0 14px rgba(242,181,68,.45))}
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="سليم">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <div class="brand">سليم</div>
+    <div class="sub">عدّاد وقت الدراسة</div>
+  </header>
+
+  <div class="presets" id="presets">
+    <button class="preset" data-min="25">٢٥ د</button>
+    <button class="preset" data-min="50">٥٠ د</button>
+    <button class="preset on" data-min="90">٩٠ د</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-mode="study">دراسة</button>
+    <button class="tab" data-mode="short">استراحة</button>
+    <button class="tab" data-mode="long">استراحة طويلة</button>
+  </div>
+
+  <div class="dial">
+    <svg viewBox="0 0 240 240" aria-hidden="true">
+      <circle class="track" cx="120" cy="120" r="104"/>
+      <circle class="progress" id="ring" cx="120" cy="120" r="104"/>
+    </svg>
+    <div class="center">
+      <div class="time" id="time">90:00</div>
+      <div class="state" id="state">جاهز للبدء</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="primary">ابدأ</button>
+    <button class="btn" id="reset">تصفير</button>
+  </div>
+
+  <section class="card">
+    <div class="goal-top">
+      <span class="right">هدف اليوم</span>
+      <span class="num"><b id="todayMin">0</b> / <span id="goalMin">90</span> د</span>
+    </div>
+    <div class="bar" id="goalBar"><i id="goalFill"></i></div>
+    <div class="meta">
+      <span>جلسات اليوم: <span id="todaySessions">0</span></span>
+      <span>السلسلة: <span id="streak">0</span> يوم</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="chart-head">
+      <span>آخر ٧ أيام</span>
+      <span>المجموع: <span id="weekTotal">0</span> د</span>
+    </div>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <details>
+    <summary>إعدادات</summary>
+    <div class="settings">
+      <label>دراسة (دقيقة)<input type="number" id="d-study" min="1" max="180" value="90"></label>
+      <label>استراحة (دقيقة)<input type="number" id="d-short" min="1" max="60" value="10"></label>
+      <label>استراحة طويلة (دقيقة)<input type="number" id="d-long" min="1" max="90" value="20"></label>
+      <label>هدف يومي (دقيقة)<input type="number" id="d-goal" min="10" max="600" value="90"></label>
+      <label>جلسات قبل الاستراحة الطويلة<input type="number" id="d-rounds" min="2" max="8" value="4"></label>
+      <div class="row"><input type="checkbox" id="d-auto"><span>تشغيل المرحلة التالية تلقائياً</span></div>
+      <div class="row"><input type="checkbox" id="d-mute"><span>كتم الصوت</span></div>
+    </div>
+  </details>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const RING_C = 2 * Math.PI * 104;
+  const $ = id => document.getElementById(id);
+
+  const ring = $('ring'), timeEl = $('time'), stateEl = $('state');
+  const primary = $('primary'), resetBtn = $('reset'), app = $('app');
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const presets = Array.from(document.querySelectorAll('.preset'));
+  const inputs = {
+    study: $('d-study'), short: $('d-short'), long: $('d-long'),
+    goal: $('d-goal'), rounds: $('d-rounds'), auto: $('d-auto'), mute: $('d-mute')
+  };
+
+  const KEY = 'saleem.timer.v2';
+  const load = () => {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}'); }
+    catch(e){ return {}; }
+  };
+  const save = o => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch(e){} };
+
+  const s = load();
+  const durations = { study: s.study || 90, short: s.short || 10, long: s.long || 20 };
+  let goal = s.goal || 90;
+  let rounds = s.rounds || 4;
+  let autoNext = !!s.auto;
+  let muted = !!s.mute;
+  let log = s.log || {};            // { 'YYYY-MM-DD': { minutes, sessions } }
+
+  inputs.study.value = durations.study;
+  inputs.short.value = durations.short;
+  inputs.long.value = durations.long;
+  inputs.goal.value = goal;
+  inputs.rounds.value = rounds;
+  inputs.auto.checked = autoNext;
+  inputs.mute.checked = muted;
+
+  let mode = 'study';
+  let total = durations[mode] * 60;
+  let remaining = total;
+  let running = false;
+  let endAt = 0;
+  let ticker = null;
+
+  /* ---------- storage ---------- */
+  function persist(){
+    save({
+      study: durations.study, short: durations.short, long: durations.long,
+      goal, rounds, auto: autoNext, mute: muted, log
+    });
+  }
+
+  function dayKey(d){
+    const x = d || new Date();
+    const p = n => String(n).padStart(2, '0');
+    return x.getFullYear() + '-' + p(x.getMonth() + 1) + '-' + p(x.getDate());
+  }
+  function dayEntry(k){
+    if (!log[k]) log[k] = { minutes: 0, sessions: 0 };
+    return log[k];
+  }
+
+  /* ---------- render ---------- */
+  function fmt(sec){
+    const m = Math.floor(sec / 60), r = sec % 60;
+    return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+  }
+
+  function renderTimer(){
+    timeEl.textContent = fmt(remaining);
+    const elapsed = total === 0 ? 0 : (total - remaining) / total;
+    ring.style.strokeDashoffset = (RING_C * elapsed).toFixed(2);
+    primary.textContent = running ? 'إيقاف مؤقت' : 'ابدأ';
+    primary.classList.toggle('paused', running);
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+    presets.forEach(p => p.classList.toggle('on', Number(p.dataset.min) === durations.study));
+    document.title = (running ? fmt(remaining) + ' · ' : '') + 'سليم';
+  }
+
+  const WEEKDAYS = ['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
+
+  function renderStats(){
+    const today = dayEntry(dayKey());
+    $('todayMin').textContent = today.minutes;
+    $('goalMin').textContent = goal;
+    $('todaySessions').textContent = today.sessions;
+
+    const pct = Math.min(100, Math.round(today.minutes / goal * 100));
+    $('goalFill').style.width = pct + '%';
+    $('goalBar').classList.toggle('full', today.minutes >= goal);
+
+    // streak
+    let streak = 0;
+    const d = new Date();
+    if ((log[dayKey(d)] || {}).minutes > 0) streak++;
+    d.setDate(d.getDate() - 1);
+    while (streak >= 0 && (log[dayKey(d)] || {}).minutes > 0) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+      if (streak > 3650) break;
+    }
+    $('streak').textContent = streak;
+
+    // last 7 days
+    const days = [];
+    for (let i = 6; i >= 0; i--){
+      const dt = new Date();
+      dt.setDate(dt.getDate() - i);
+      const k = dayKey(dt);
+      days.push({
+        k,
+        minutes: (log[k] || {}).minutes || 0,
+        label: WEEKDAYS[dt.getDay()],
+        today: i === 0
+      });
+    }
+    const max = Math.max(goal, ...days.map(x => x.minutes), 10);
+    const chart = $('chart');
+    chart.innerHTML = '';
+    let sum = 0;
+    days.forEach(x => {
+      sum += x.minutes;
+      const col = document.createElement('div');
+      col.className = 'col' + (x.today ? ' today' : '');
+      col.innerHTML =
+        '<div class="v">' + (x.minutes ? x.minutes : '') + '</div>' +
+        '<div class="b" style="height:' + (x.minutes ? Math.max(4, x.minutes / max * 100) : 2) + '%"></div>' +
+        '<div class="d">' + x.label + '</div>';
+      chart.appendChild(col);
+    });
+    $('weekTotal').textContent = sum;
+  }
+
+  function render(){ renderTimer(); renderStats(); }
+
+  /* ---------- timer ---------- */
+  function stopTicker(){ if (ticker){ clearInterval(ticker); ticker = null; } }
+
+  function tick(){
+    remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+    if (remaining <= 0){ finish(); return; }
+    renderTimer();
+  }
+
+  function start(){
+    if (running) return;
+    if (remaining <= 0) remaining = total;
+    running = true;
+    endAt = Date.now() + remaining * 1000;
+    stopTicker();
+    ticker = setInterval(tick, 250);
+    stateEl.textContent = mode === 'study' ? 'تركيز…' : 'استرح، تستاهل';
+    primeAudio();
+    renderTimer();
+  }
+
+  function pause(){
+    if (!running) return;
+    remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+    running = false;
+    stopTicker();
+    stateEl.textContent = 'متوقف مؤقتاً';
+    renderTimer();
+  }
+
+  function reset(){
+    running = false;
+    stopTicker();
+    remaining = total;
+    stateEl.textContent = 'جاهز للبدء';
+    app.classList.remove('done');
+    renderTimer();
+  }
+
+  function switchMode(next, keepRunning){
+    mode = next;
+    total = durations[mode] * 60;
+    remaining = total;
+    running = false;
+    stopTicker();
+    app.classList.remove('done');
+    renderTimer();
+    if (keepRunning) start();
+    else stateEl.textContent = mode === 'study' ? 'جاهز للبدء' : 'وقت الاستراحة';
+  }
+
+  function finish(){
+    const doneMode = mode;
+    const doneMinutes = Math.round(total / 60);
+    running = false;
+    stopTicker();
+    remaining = 0;
+    app.classList.add('done');
+    renderTimer();
+    if (!muted) beep(doneMode === 'study' ? 3 : 2);
+
+    if (doneMode === 'study'){
+      const entry = dayEntry(dayKey());
+      entry.minutes += doneMinutes;
+      entry.sessions += 1;
+      persist();
+      renderStats();
+      stateEl.textContent = 'خلصت جلسة — ' + entry.minutes + ' دقيقة اليوم';
+      const next = (entry.sessions % rounds === 0) ? 'long' : 'short';
+      switchMode(next, autoNext);
+    } else {
+      stateEl.textContent = 'خلصت الاستراحة';
+      switchMode('study', autoNext);
+    }
+    if (!autoNext) setTimeout(() => app.classList.remove('done'), 1200);
+  }
+
+  /* ---------- sound ---------- */
+  let audioCtx = null;
+  function primeAudio(){
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch(e){}
+  }
+  function beep(times){
+    try {
+      primeAudio();
+      if (!audioCtx) return;
+      const t0 = audioCtx.currentTime + 0.05;
+      for (let i = 0; i < times; i++){
+        const t = t0 + i * 0.5;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(784, t);
+        o.frequency.setValueAtTime(1046, t + 0.12);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.32, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(t); o.stop(t + 0.45);
+      }
+    } catch(e){}
+  }
+
+  /* ---------- events ---------- */
+  primary.addEventListener('click', () => { running ? pause() : start(); });
+  resetBtn.addEventListener('click', reset);
+
+  tabs.forEach(t => t.addEventListener('click', () => {
+    if (t.dataset.mode === mode && !running) return;
+    switchMode(t.dataset.mode, false);
+  }));
+
+  presets.forEach(p => p.addEventListener('click', () => {
+    const v = Number(p.dataset.min);
+    durations.study = v;
+    inputs.study.value = v;
+    persist();
+    if (mode === 'study' && !running){
+      total = v * 60;
+      remaining = total;
+      stateEl.textContent = 'جاهز للبدء';
+      render();
+    } else {
+      renderTimer();
+    }
+  }));
+
+  function bindDuration(input, apply){
+    input.addEventListener('change', () => {
+      let v = parseInt(input.value, 10);
+      if (!Number.isFinite(v) || v < 1) v = 1;
+      input.value = v;
+      apply(v);
+      persist();
+      if (!running) render();
+    });
+  }
+  bindDuration(inputs.study, v => {
+    durations.study = v;
+    if (mode === 'study'){ total = v * 60; remaining = total; }
+  });
+  bindDuration(inputs.short, v => {
+    durations.short = v;
+    if (mode === 'short'){ total = v * 60; remaining = total; }
+  });
+  bindDuration(inputs.long, v => {
+    durations.long = v;
+    if (mode === 'long'){ total = v * 60; remaining = total; }
+  });
+  bindDuration(inputs.goal, v => { goal = v; });
+
+  inputs.rounds.addEventListener('change', () => {
+    let v = parseInt(inputs.rounds.value, 10);
+    if (!Number.isFinite(v) || v < 2) v = 2;
+    inputs.rounds.value = v;
+    rounds = v;
+    persist();
+  });
+  inputs.auto.addEventListener('change', () => { autoNext = inputs.auto.checked; persist(); });
+  inputs.mute.addEventListener('change', () => { muted = inputs.mute.checked; persist(); });
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !/INPUT|BUTTON/.test(document.activeElement.tagName)){
+      e.preventDefault();
+      running ? pause() : start();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && running) tick();
+  });
+
+  render();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
